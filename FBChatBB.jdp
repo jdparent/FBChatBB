@@ -19,6 +19,8 @@ Description=Facebook Chat Application for BlackBerry
 ExcludeFromBuildAll=0
 [Files
 org\biff\fbchatbb\FBChatBB.java
+org\biff\fbchatbb\ProgressBar.java
+org\biff\fbchatbb\ProgressStatus.java
 ]
 HaveAlxImports=0
 HaveDefs=0
