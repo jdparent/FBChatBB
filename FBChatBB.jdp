@@ -18,9 +18,19 @@ AutoRestart=0
 Description=Facebook Chat Application for BlackBerry
 ExcludeFromBuildAll=0
 [Files
+net\sourceforge\jxa\Base64.java
+net\sourceforge\jxa\XmlReader.java
+net\sourceforge\jxa\XmlWriter.java
+net\sourceforge\jxa\XmppListener.java
+org\biff\auth\SaslChallenge.java
+org\biff\auth\SaslChallengeResponse.java
+org\biff\fbchatbb\BuddyList.java
+org\biff\fbchatbb\ChatClient.java
+org\biff\fbchatbb\FBChatAPI.java
 org\biff\fbchatbb\FBChatBB.java
-org\biff\fbchatbb\ProgressBar.java
-org\biff\fbchatbb\ProgressStatus.java
+org\biff\ui\ProgressBar.java
+org\biff\ui\ProgressStatus.java
+org\biff\util\MD5.java
 ]
 HaveAlxImports=0
 HaveDefs=0
@@ -30,7 +40,6 @@ HaveImports=1
 [ImplicitRules
 ]
 [Imports
-lib\jxa-1.0.jar
 ]
 Listing=0
 Options=-quiet
