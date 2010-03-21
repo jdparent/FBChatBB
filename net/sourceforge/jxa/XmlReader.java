@@ -17,6 +17,7 @@ package net.sourceforge.jxa;
 
 import java.io.*;
 import java.util.*;
+import org.biff.io.NonBlockingInputStream;
 
 /**
  * XML-Reader
@@ -27,6 +28,7 @@ import java.util.*;
  */
 public class XmlReader {	
 	private InputStream is;
+  private NonBlockingInputStream nis;
 
 	public final static int START_DOCUMENT = 0;
 
@@ -56,6 +58,7 @@ public class XmlReader {
 	public XmlReader(final InputStream in) throws IOException {
 		//reader = new InputStreamReader(in, "UTF-8");
 		this.is = in;
+    this.nis = new NonBlockingInputStream(in);
 		this.tags = new Stack();
 		this.inside_tag = false;
 	}
@@ -63,17 +66,17 @@ public class XmlReader {
 	//http://discussion.forum.nokia.com/forum/showthread.php?t=76814
 	//by abirr
 	private int getNextCharacter() throws IOException {
-		int a = is.read();
+		int a = nis.read();
 		int t=a;
 
 		if((t|0xC0)==t){
-		int b = is.read();
+		int b = nis.read();
 		if( b == 0xFF ){ // Check if legal
 		t=-1;
 		}else if( b < 0x80 ){ // Check for UTF8 compliancy
 		throw new IOException("Bad UTF-8 Encoding encountered");
 		}else if((t|0xE0)==t) {
-		int c = is.read();
+		int c = nis.read();
 		if( c == 0xFF ){ // Check if legal
 		t=-1;
 		}else if( c < 0x80 ){ // Check for UTF8 compliancy
@@ -236,4 +239,9 @@ public class XmlReader {
 		} while (((this.c = getNextCharacter()) != end) && (this.c != '>') && (this.c != '/'));
 		return output.toString();
 	}
+
+  public int available()
+  {
+    return this.nis.available();
+  }
 };
