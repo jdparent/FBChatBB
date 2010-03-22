@@ -21,11 +21,15 @@
 
 package org.biff.fbchatbb;
 
+import java.util.Hashtable;
+import net.rim.device.api.system.PersistentObject;
+import net.rim.device.api.system.PersistentStore;
 import net.rim.device.api.ui.Field;
 import net.rim.device.api.ui.FieldChangeListener;
 import net.rim.device.api.ui.UiApplication;
 import net.rim.device.api.ui.component.BasicEditField;
 import net.rim.device.api.ui.component.ButtonField;
+import net.rim.device.api.ui.component.CheckboxField;
 import net.rim.device.api.ui.component.Dialog;
 import net.rim.device.api.ui.component.LabelField;
 import net.rim.device.api.ui.component.NullField;
@@ -55,18 +59,43 @@ final class SigninScreen extends MainScreen implements FieldChangeListener
   private BasicEditField usernameField;
   private PasswordEditField passField;
   private ButtonField signInButton;
+  private CheckboxField saveSignInSettingsCheckbox;
   private ChatClient client;
-  
+
+  private static Hashtable settings;
+  private static PersistentObject store;
+
+  static
+  {
+    store = PersistentStore.getPersistentObject(0xdec6a67098f833dL);
+
+    synchronized(store)
+    {
+      settings = (Hashtable)store.getContents();
+      
+      if (settings == null)
+      {
+        settings = new Hashtable();
+        store.setContents(settings);
+        store.commit();
+      }
+    }
+  }
+
   public SigninScreen()
   {
     add(new LabelField("FFChatBB", 0, -1, Field.FIELD_HCENTER));
     add(new NullField(Field.FIELD_HCENTER));
-    
-    usernameField = new BasicEditField("Username:", null);
+
+    String username = (String)settings.get("USERNAME");
+
+    usernameField = new BasicEditField("Username:", username);
 
     add(usernameField);
 
-    passField = new PasswordEditField("Password:", null);
+    String password = (String)settings.get("PASSWORD");
+
+    passField = new PasswordEditField("Password:", password);
 
     add(passField);
 
@@ -75,6 +104,18 @@ final class SigninScreen extends MainScreen implements FieldChangeListener
     signInButton.setChangeListener(this);
 
     add(signInButton);
+
+    Boolean saveSettings = (Boolean)settings.get("SAVE_SETTINGS");
+
+    if (saveSettings == null)
+    {
+      saveSettings = new Boolean(false);
+    }
+
+    saveSignInSettingsCheckbox = 
+      new CheckboxField("Save Settings", saveSettings.booleanValue());
+
+    add(saveSignInSettingsCheckbox);
 
     client = null;
   }
@@ -91,11 +132,44 @@ final class SigninScreen extends MainScreen implements FieldChangeListener
     }
     else
     {
+      // Check if "Save Settings" is checked and save settings.
+      if (saveSignInSettingsCheckbox.getChecked())
+      {
+        // Checkbox
+        settings.put("SAVE_SETTINGS", new Boolean(true));
+
+        // Username
+        settings.put("USERNAME", usernameField.getText());
+
+        // Password
+        settings.put("PASSWORD", passField.getText());
+      }
+      else
+      {
+        settings.remove("SAVE_SETTINGS");
+        settings.remove("USERNAME");
+        settings.remove("PASSWORD");
+      }
+      
+      synchronized(store)
+      {
+        store.setContents(settings);
+        store.commit();
+      }
+
+      // Create client and connect
       client = new ChatClient(
         usernameField.getText(),
         passField.getText());
 
       client.open();
     }
+  }
+  
+  public boolean onClose()
+  {
+    Dialog.alert("Goodbye!");
+    System.exit(0);
+    return true;
   }
 } 
