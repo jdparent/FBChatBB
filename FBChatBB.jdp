@@ -28,10 +28,13 @@ org\biff\fbchatbb\BuddyList.java
 org\biff\fbchatbb\ChatClient.java
 org\biff\fbchatbb\FBChatAPI.java
 org\biff\fbchatbb\FBChatBB.java
+org\biff\fbchatbb\UpdateCheckerManager.java
 org\biff\io\NonBlockingInputStream.java
 org\biff\ui\ProgressBar.java
 org\biff\ui\ProgressStatus.java
+org\biff\updates\UpdateChecker.java
 org\biff\util\MD5.java
+org\biff\util\WebLauncher.java
 org\biff\util\XmlObject.java
 ]
 HaveAlxImports=0

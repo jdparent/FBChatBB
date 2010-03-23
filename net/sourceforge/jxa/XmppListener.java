@@ -43,6 +43,10 @@ public interface XmppListener {
 	 */
 	public void onAuthFailed(final String message);
 
+  public void onSession(final String session);
+
+  public void onSessionFailed(final String message);
+
 	/**
 	 * This event is sent when a message arrives.
 	 * 

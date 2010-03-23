@@ -26,12 +26,14 @@ import net.rim.device.api.system.PersistentObject;
 import net.rim.device.api.system.PersistentStore;
 import net.rim.device.api.ui.Field;
 import net.rim.device.api.ui.FieldChangeListener;
+import net.rim.device.api.ui.MenuItem;
 import net.rim.device.api.ui.UiApplication;
 import net.rim.device.api.ui.component.BasicEditField;
 import net.rim.device.api.ui.component.ButtonField;
 import net.rim.device.api.ui.component.CheckboxField;
 import net.rim.device.api.ui.component.Dialog;
 import net.rim.device.api.ui.component.LabelField;
+import net.rim.device.api.ui.component.Menu;
 import net.rim.device.api.ui.component.NullField;
 import net.rim.device.api.ui.component.PasswordEditField;
 import net.rim.device.api.ui.container.MainScreen;
@@ -41,6 +43,11 @@ import net.rim.device.api.ui.container.MainScreen;
  */
 class FBChatBB extends UiApplication
 {
+  public final static String APP_NAME = "FBChatBB";
+  public final static String VERSION = "0.0.0";
+  public final static String UPDATE_URL =
+    "http://www.biffengineering.com/blackberry/applications.xml";
+
     public static void main(String[] args)
     {
       FBChatBB app = new FBChatBB();
@@ -171,5 +178,42 @@ final class SigninScreen extends MainScreen implements FieldChangeListener
     Dialog.alert("Goodbye!");
     System.exit(0);
     return true;
+  }
+
+  private MenuItem checkForUpdatesItem =
+    new MenuItem("Check For Updates", 110, 10)
+  {
+    public void run()
+    {
+      UpdateCheckerManager checker =
+        new UpdateCheckerManager(
+          FBChatBB.APP_NAME,
+          FBChatBB.VERSION,
+          FBChatBB.UPDATE_URL);
+      
+      checker.start();
+      try
+      {
+        checker.join();
+      }
+      catch (InterruptedException ex)
+      {
+        ex.printStackTrace();
+      }
+    }
+  };
+
+  private MenuItem closeItem = new MenuItem("Close", 200000, 10)
+  {
+    public void run()
+    {
+      onClose();
+    }
+  };
+
+  protected void makeMenu(Menu menu, int instance)
+  {
+    menu.add(checkForUpdatesItem);
+    menu.add(closeItem);
   }
 } 

@@ -56,7 +56,7 @@ public class ProgressBar
 
     label = new LabelField(title);
 
-    gauge = new GaugeField(null, 0, 100, 20, GaugeField.PERCENT);
+    gauge = new GaugeField(null, 0, 100, 0, GaugeField.PERCENT);
 
     manager.addCustomField(label);
     manager.addCustomField(gauge);
@@ -74,20 +74,26 @@ public class ProgressBar
 
   /**
    * Updates the progress.
-   *
+   
    * The current percentage and message are provided by monitor passed in
    * the construtor.
    * @see ProgressStatus
    */
   public void update()
   {
-    int percentage = monitor.getPercents();
+    final int percentage = monitor.getPercents();
 
     if (gauge.getValue() <= percentage)
     {
-      label.setText(monitor.getMessage());
+      UiApplication.getUiApplication().invokeLater(new Runnable()
+      {
+        public void run()
+        {
+          label.setText(monitor.getMessage());
 
-      gauge.setValue(percentage);
+          gauge.setValue(percentage);
+        }
+      });
     }
 
     popup.doPaint();

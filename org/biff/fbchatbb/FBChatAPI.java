@@ -23,6 +23,7 @@ package org.biff.fbchatbb;
 
 import java.io.IOException;
 import java.util.Enumeration;
+import java.util.Random;
 import java.util.Vector;
 import javax.microedition.io.Connector;
 import javax.microedition.io.StreamConnection;
@@ -42,7 +43,10 @@ public class FBChatAPI extends Thread
 {
   private final String username, password, myId;
   private final String host = "chat.facebook.com";
+  private String jid;
   private String sessionKey;
+  private BuddyList buddyList;
+  
   private XmlReader reader;
   private XmlWriter writer;
 
@@ -58,7 +62,18 @@ public class FBChatAPI extends Thread
   private final static int PRESENCE_STATE = 6;
 
   private int state;
+
   private boolean isRunning;
+
+  private final static int DISCONNECTED_STATUS = 0;
+  private final static int CONNECTED_STATUS = 1;
+  private final static int LOGGED_IN_STATUS = 2;
+  private final static int UPDATE_BUDDY_LIST_STATUS = 3;
+  private final static int COMMUNICATIONS_STATUS = 4;
+  private int status;
+
+  private String resource;
+  private volatile String id;
 
   public FBChatAPI(final String username, final String password)
   {
@@ -70,7 +85,11 @@ public class FBChatAPI extends Thread
 
     state = OFF_STATE;
 
+    status = DISCONNECTED_STATUS;
+
     isRunning = false;
+
+    this.resource = new String("FBChatBB");
   }
 
   public void run()
@@ -142,6 +161,7 @@ public class FBChatAPI extends Thread
   {
     if (this.state == OFF_STATE)
     {
+      status = FBChatAPI.CONNECTED_STATUS;
       state = FBChatAPI.STREAM_STREAM_STATE;
 
       try
@@ -167,91 +187,6 @@ public class FBChatAPI extends Thread
         state = FBChatAPI.OFF_STATE;
       }
 
-    }
-  }
-
-  public void login2() throws IOException, InterruptedException
-  {
-    // Send Version
-    
-    // Start Stream
-    this.writer.startTag("stream:stream");
-    this.writer.attribute("to", this.host);
-    this.writer.attribute("xmlns", "jabber:client");
-    this.writer.attribute("xmlns:stream", "http://etherx.jabber.org/streams");
-    this.writer.attribute("version", "1.0");
-    this.writer.flush();
-    
-    java.lang.Thread.sleep(100);
-
-    // Read Features
-    do
-    {
-      this.reader.next();
-    } while((reader.getType() != XmlReader.END_TAG) ||
-      (!reader.getName().equals("stream:features")));
-    
-    // Send Login type request
-    this.writer.startTag("auth");
-    this.writer.attribute("xmlns", "urn:ietf:params:xml:ns:xmpp-sasl");
-    this.writer.attribute("mechanism", "DIGEST-MD5");
-    this.writer.attribute("xmlns:ga", "http://www.google.com/talk/protocol/auth");
-    this.writer.attribute("ga:client-uses-full-bind-result", "true");
-    this.writer.endTag();
-    this.writer.flush();
-    
-    java.lang.Thread.sleep(100);
-    
-    // Read Challenge
-    do
-    {
-      this.reader.next();
-    } while((reader.getType() != XmlReader.START_TAG) &&
-      (!reader.getName().equals("challenge")));
-
-    if (reader.getName().equals("challenge"))
-    {
-      reader.next();
-      
-      SaslChallenge challenge = SaslChallenge.parse(reader.getText());
-
-      SaslChallengeResponse response =
-        new SaslChallengeResponse(challenge, this.username, this.password);
-
-      this.writer.startTag("response");
-      this.writer.attribute("xmlns", "urn:ietf:params:xml:ns:xmpp-sasl");
-      this.writer.text(response.getEncodedContent());
-      this.writer.endTag();
-      this.writer.flush();
-
-      java.lang.Thread.sleep(100);
-      
-      // Read rspauth
-      do
-      {
-        this.reader.next();
-      } while((this.reader.getType() != XmlReader.END_TAG) ||
-        (!this.reader.getName().equals("challenge")));
-
-      // Send empty response
-      this.writer.startTag("response");
-      this.writer.attribute("xmlns", "urn.ietf:params:xml:ns:xmpp-sasl");
-      this.writer.endTag();
-      this.writer.flush();
-
-      java.lang.Thread.sleep(100);
-      
-      // Read Success
-      do
-      {
-        this.reader.next();
-      } while((this.reader.getType() != XmlReader.END_TAG) ||
-        (!this.reader.getName().equals("success")));
-
-    }
-    else
-    {
-      throw new IOException("Login failed");
     }
   }
 
@@ -405,7 +340,6 @@ public class FBChatAPI extends Thread
 
           if (so.getTag().equals("stream:features"))
           {
-
             feature = so;
           }
         }
@@ -422,26 +356,63 @@ public class FBChatAPI extends Thread
 
     if (feature != null)
     {
-      // Send Auth
-      try
+      if (this.status == FBChatAPI.CONNECTED_STATUS)
       {
-        this.writer.startTag("auth");
-        this.writer.attribute("xmlns", "urn:ietf:params:xml:ns:xmpp-sasl");
-        this.writer.attribute("mechanism", "DIGEST-MD5");
-        this.writer.attribute("xmlns:ga", "http://www.google.com/talk/protocol/auth");
-        this.writer.attribute("ga:client-uses-full-bind-result", "true");
-        this.writer.endTag();
-        this.writer.flush();
-
-        this.state = FBChatAPI.AUTH_STATE;
-      }
-      catch (IOException e)
-      {
-        for (int j = 0; j < listeners.size(); j++)
+        // Send Auth
+        try
         {
-          XmppListener l = (XmppListener)listeners.elementAt(j);
+          this.writer.startTag("auth");
+          this.writer.attribute("xmlns", "urn:ietf:params:xml:ns:xmpp-sasl");
+          this.writer.attribute("mechanism", "DIGEST-MD5");
+          this.writer.attribute("xmlns:ga", "http://www.google.com/talk/protocol/auth");
+          this.writer.attribute("ga:client-uses-full-bind-result", "true");
+          this.writer.endTag();
+          this.writer.flush();
 
-          l.onAuthFailed("Failed sending <auth>");
+          this.state = FBChatAPI.AUTH_STATE;
+        }
+        catch (IOException e)
+        {
+          for (int j = 0; j < listeners.size(); j++)
+          {
+            XmppListener l = (XmppListener)listeners.elementAt(j);
+
+            l.onAuthFailed("Failed sending <auth>");
+          }
+        }
+      }
+      else if (this.status == FBChatAPI.LOGGED_IN_STATUS)
+      {
+        // Request Resource
+        try
+        {
+          this.id = getNewID();
+
+          this.writer.startTag("iq");
+          this.writer.attribute("type", "set");
+          this.writer.attribute("id", this.id);
+
+          this.writer.startTag("bind");
+          this.writer.attribute("xmlns", "urn:ietf:params:xml:ns:xmpp-bind");
+
+          this.writer.startTag("resource");
+          this.writer.text(this.resource);
+
+          this.writer.endTag(); // </resource>
+          this.writer.endTag(); // </bind>
+          this.writer.endTag(); // </iq>
+          this.writer.flush();
+
+          this.state = FBChatAPI.IQ_STATE;
+        }
+        catch (IOException e)
+        {
+          for (int j = 0; j < listeners.size(); j++)
+          {
+            XmppListener l = (XmppListener)listeners.elementAt(j);
+
+            l.onConnFailed("Failed to establish resource");
+          }
         }
       }
     }
@@ -513,6 +484,8 @@ public class FBChatAPI extends Thread
     }
     else if (obj.getTag().equals("success"))
     {
+      this.status = FBChatAPI.LOGGED_IN_STATUS;
+      
       for (int j = 0; j < listeners.size(); j++)
       {
         XmppListener l = (XmppListener)listeners.elementAt(j);
@@ -528,11 +501,111 @@ public class FBChatAPI extends Thread
 
   private void eventIqState (XmlObject obj)
   {
-    throw new UnsupportedOperationException("Not yet implemented");
+    if (obj.getTag().equals("iq"))
+    {
+      if (obj.getAttribute("id").equals(this.id))
+      {
+        XmlObject bind = obj.getSubObject("bind");
+
+        if (bind != null)
+        {
+          XmlObject jidXml = bind.getSubObject("jid");
+
+          if (jidXml != null)
+          {
+            this.jid = jidXml.getText();
+
+            this.status = FBChatAPI.COMMUNICATIONS_STATUS;
+            
+            for (int i = 0; i < listeners.size(); i++)
+            {
+              XmppListener l = (XmppListener)listeners.elementAt(i);
+
+              l.onSession("Obtained Resource");
+            }
+          }
+        }
+      }
+      else
+      {
+        // Handle other request
+      }
+    }
   }
 
   private void eventPresenceState (XmlObject obj)
   {
     throw new UnsupportedOperationException("Not yet implemented");
+  }
+
+  void establishSession ()
+  {
+    if (this.status == FBChatAPI.LOGGED_IN_STATUS)
+    {
+      state = FBChatAPI.STREAM_STREAM_STATE;
+
+      try
+      {
+        // Start Stream
+        this.writer.startTag("stream:stream");
+        this.writer.attribute("to", this.host);
+        this.writer.attribute("xmlns", "jabber:client");
+        this.writer.attribute("xmlns:stream",
+          "http://etherx.jabber.org/streams");
+        this.writer.attribute("version", "1.0");
+        this.writer.flush();
+      }
+      catch (IOException ex)
+      {
+        for (int i = 0; i < listeners.size(); i++)
+        {
+          XmppListener l = (XmppListener)listeners.elementAt(i);
+
+          l.onAuthFailed("Failed sending <stream:stream>");
+        }
+
+        state = FBChatAPI.OFF_STATE;
+      }
+
+    }
+  }
+
+  void updateBuddyList (BuddyList buddyList)
+  {
+    this.buddyList = buddyList;
+
+    try
+    {
+      this.id = getNewID();
+
+      this.writer.startTag("iq");
+      this.writer.attribute("type", "get");
+      this.writer.attribute("id", this.id);
+
+      this.writer.startTag("query");
+      this.writer.attribute("xmlns", "jabber:iq:roster");
+
+      this.writer.endTag(); // </query>
+      this.writer.endTag(); // </iq>
+
+      this.writer.flush();
+
+      this.state = FBChatAPI.IQ_STATE;
+    }
+    catch (IOException e)
+    {
+      // Handle Error
+    }
+  }
+
+  private String getNewID ()
+  {
+    Random r = new Random();
+
+    r.setSeed(System.currentTimeMillis());
+
+    String newId = "fbchat" + Math.abs(r.nextInt());
+
+    return newId;
   }
 }

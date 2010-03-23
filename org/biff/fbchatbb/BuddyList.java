@@ -21,6 +21,7 @@
 
 package org.biff.fbchatbb;
 
+import java.util.Enumeration;
 import java.util.Hashtable;
 
 /**
@@ -40,6 +41,11 @@ public class BuddyList
    * All buddies' statuses.
    */
   private Hashtable status = new Hashtable();
+
+  /**
+   * JID to Name
+   */
+  private Hashtable jids = new Hashtable();
 
   private int messageNumber = 0;
 
@@ -168,5 +174,51 @@ public class BuddyList
     }
 
     return buddyStatus;
+  }
+
+  public void addBuddy(final String jid, final String name)
+  {
+    this.jids.put(jid, name);
+  }
+
+  public String getName(final String jid)
+  {
+    String name = "empty";
+
+    if (this.jids.contains(jid))
+    {
+      name = this.jids.get(jid).toString();
+    }
+
+    return name;
+  }
+
+  public String getJID(final String name)
+  {
+    String jid = "empty";
+
+    if (this.jids.contains(name))
+    {
+      Enumeration k = this.jids.keys();
+
+      while(k.hasMoreElements())
+      {
+        String t_jid = (String)k.nextElement();
+
+        String t_name = (String)this.jids.get(t_jid);
+
+        if (t_name.equals(name))
+        {
+          jid = t_jid;
+        }
+      }
+    }
+
+    return jid;
+  }
+
+  public Enumeration getJIDs()
+  {
+    return this.jids.keys();
   }
 }

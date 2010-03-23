@@ -78,7 +78,11 @@ public class ChatClient implements XmppListener, ProgressStatus
 
   public void onAuth (String resource)
   {
-    throw new UnsupportedOperationException("Not supported yet.");
+    this.loginPercent = this.getPercents() + 10;
+    this.loginText = "Request Session";
+    this.loginProgress.update();
+
+    fb.establishSession();
   }
 
   public void onAuthFailed (String message)
@@ -129,5 +133,21 @@ public class ChatClient implements XmppListener, ProgressStatus
   public void setMessage (String message)
   {
     this.loginText = message;
+  }
+
+  public void onSession (String session)
+  {
+    this.loginPercent = this.getPercents() + 10;
+    this.loginText = "Gather Buddy List";
+    this.loginProgress.update();
+
+    //fb.updateBuddyList(buddyList);
+    
+    this.loginProgress.close();
+  }
+
+  public void onSessionFailed (String message)
+  {
+    throw new UnsupportedOperationException("Not supported yet.");
   }
 }

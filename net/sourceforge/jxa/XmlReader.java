@@ -90,9 +90,7 @@ public class XmlReader {
 	}
 	
 	public void close() {
-		/*try {
-			reader.close();
-		} catch (IOException e) {}*/
+		this.nis.close();
 	}
 
 	public int next() throws IOException {
