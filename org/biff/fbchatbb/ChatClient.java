@@ -141,9 +141,7 @@ public class ChatClient implements XmppListener, ProgressStatus
     this.loginText = "Gather Buddy List";
     this.loginProgress.update();
 
-    //fb.updateBuddyList(buddyList);
-    
-    this.loginProgress.close();
+    fb.updateBuddyList(buddyList);
   }
 
   public void onSessionFailed (String message)

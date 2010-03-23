@@ -75,6 +75,14 @@ public class FBChatAPI extends Thread
   private String resource;
   private volatile String id;
 
+  private final static int IQ_NONE = 0;
+  private final static int IQ_BIND = 1;
+  private final static int IQ_SESSION = 2;
+  private final static int IQ_ITEMS = 3;
+  private final static int IQ_INFO = 4;
+  private final static int IQ_ROSTER = 5;
+  private int iqStep;
+
   public FBChatAPI(final String username, final String password)
   {
     this.username = username;
@@ -86,6 +94,8 @@ public class FBChatAPI extends Thread
     state = OFF_STATE;
 
     status = DISCONNECTED_STATUS;
+
+    iqStep = IQ_NONE;
 
     isRunning = false;
 
@@ -251,18 +261,38 @@ public class FBChatAPI extends Thread
         // Start Tags or Text
         this.reader.next();
 
-        while ((this.reader.getType() != XmlReader.END_TAG)
-          && (this.reader.getType() != XmlReader.END_DOCUMENT))
+        int failedRead = 0;
+
+        /*while ((this.reader.getType() != XmlReader.END_TAG)
+          && (this.reader.getType() != XmlReader.END_DOCUMENT))*/
+        while ((this.reader.getType() != XmlReader.END_TAG) &&
+          (failedRead < 5))
         {
           if (this.reader.getType() == XmlReader.TEXT)
           {
+            failedRead = 0;
             obj.setText(this.reader.getText());
           }
           else if (this.reader.getType() == XmlReader.START_TAG)
           {
+            failedRead = 0;
+
             XmlObject subObj = readXml();
 
             obj.addSubObject(subObj);
+          }
+          else if (reader.getType() == XmlReader.END_DOCUMENT)
+          {
+            failedRead++;
+
+            try
+            {
+              java.lang.Thread.sleep(100);
+            }
+            catch (InterruptedException ex)
+            {
+              ex.printStackTrace();
+            }
           }
           
           this.reader.next();
@@ -505,23 +535,114 @@ public class FBChatAPI extends Thread
     {
       if (obj.getAttribute("id").equals(this.id))
       {
-        XmlObject bind = obj.getSubObject("bind");
-
-        if (bind != null)
+        if (iqStep == FBChatAPI.IQ_BIND)
         {
-          XmlObject jidXml = bind.getSubObject("jid");
+          XmlObject bind = obj.getSubObject("bind");
 
-          if (jidXml != null)
+          if (bind != null)
           {
-            this.jid = jidXml.getText();
+            XmlObject jidXml = bind.getSubObject("jid");
 
-            this.status = FBChatAPI.COMMUNICATIONS_STATUS;
-            
-            for (int i = 0; i < listeners.size(); i++)
+            if (jidXml != null)
             {
-              XmppListener l = (XmppListener)listeners.elementAt(i);
+              this.jid = jidXml.getText();
 
-              l.onSession("Obtained Resource");
+              iqStep = FBChatAPI.IQ_SESSION;
+
+              try
+              {
+                this.id = this.getNewID();
+
+                this.writer.startTag("iq");
+                this.writer.attribute("type", "set");
+                this.writer.attribute("id", this.id);
+
+                this.writer.startTag("session");
+                this.writer.attribute("xmlns", "urn:ietf:params:xml:ns:xmpp-session");
+
+                this.writer.endTag(); // </session>
+                this.writer.endTag(); // </iq>
+                this.writer.flush();
+              }
+              catch (IOException ex)
+              {
+                ex.printStackTrace();
+              }
+
+            }
+          }
+        }
+        else if (iqStep == FBChatAPI.IQ_SESSION)
+        {
+          iqStep = FBChatAPI.IQ_ITEMS;
+
+          try
+          {
+            id = this.getNewID();
+
+            writer.startTag("iq");
+            writer.attribute("type", "get");
+            writer.attribute("id", this.id);
+            writer.attribute("to", this.host);
+
+            writer.startTag("query");
+            writer.attribute("xmlns", "http://jabber.org/protocol/disco#items");
+
+            writer.endTag(); // </query>
+            writer.endTag(); // </iq>
+            writer.flush();
+          }
+          catch (IOException ex)
+          {
+            ex.printStackTrace();
+          }
+        }
+        else if (iqStep == FBChatAPI.IQ_ITEMS)
+        {
+          iqStep = FBChatAPI.IQ_INFO;
+
+          try
+          {
+            id = getNewID();
+
+            writer.startTag("iq");
+            writer.attribute("type", "get");
+            writer.attribute("id", id);
+            writer.attribute("to", this.host);
+
+            writer.startTag("query");
+            writer.attribute("xmlns", "http://jabber.org/protocol/disco#info");
+
+            writer.endTag();  // </query>
+            writer.endTag();  // </iq>
+            writer.flush();
+          }
+          catch (IOException ex)
+          {
+            ex.printStackTrace();
+          }
+        }
+        else if (iqStep == FBChatAPI.IQ_INFO)
+        {
+          for (int j = 0; j < listeners.size(); j++)
+          {
+            XmppListener l = (XmppListener)listeners.elementAt(j);
+
+            l.onSession("Started Session");
+          }
+        }
+        else if (iqStep == FBChatAPI.IQ_ROSTER)
+        {
+          XmlObject query = obj.getSubObject("query");
+
+          if (query != null)
+          {
+            for (int i = 0; i < query.subObjectCount(); i++)
+            {
+              XmlObject item = query.getSubObject(i);
+
+              buddyList.addBuddy(item.getAttribute("jid"),
+                item.getAttribute("name"));
             }
           }
         }
@@ -543,6 +664,8 @@ public class FBChatAPI extends Thread
     if (this.status == FBChatAPI.LOGGED_IN_STATUS)
     {
       state = FBChatAPI.STREAM_STREAM_STATE;
+
+      iqStep = FBChatAPI.IQ_BIND;
 
       try
       {
@@ -576,6 +699,8 @@ public class FBChatAPI extends Thread
 
     try
     {
+      iqStep = FBChatAPI.IQ_ROSTER;
+
       this.id = getNewID();
 
       this.writer.startTag("iq");
