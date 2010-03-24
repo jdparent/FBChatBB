@@ -47,6 +47,10 @@ public interface XmppListener {
 
   public void onSessionFailed(final String message);
 
+  public void onBuddyList(final String messagE);
+
+  public void onBuddyListFailed(final String message);
+
 	/**
 	 * This event is sent when a message arrives.
 	 * 
