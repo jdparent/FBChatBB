@@ -38,30 +38,34 @@ public class SaslChallenge
   private String nonce;
   private String qop;
   private String realm;
+  private String rspauth;
 
   public SaslChallenge(
     String algorithm,
     String charset,
     String nonce,
     String qop,
-    String realm)
+    String realm,
+    String rspauth)
   {
     this.algorithm = algorithm;
     this.charset = charset;
     this.nonce = nonce;
     this.qop = qop;
     this.realm = realm;
+    this.rspauth = rspauth;
   }
   
   private SaslChallenge(String rawDecodedText)
   {
     Hashtable values = getQueryTable(rawDecodedText);
 
-    algorithm = values.get("algorithm").toString();
-    charset = values.get("charset").toString();
-    nonce = values.get("nonce").toString();
-    qop = values.get("qop").toString();
-    realm = values.get("realm").toString();
+    algorithm = (String)values.get("algorithm");
+    charset = (String)values.get("charset");
+    nonce = (String)values.get("nonce");
+    qop = (String)values.get("qop");
+    realm = (String)values.get("realm");
+    rspauth = (String)values.get("rspauth");
   }
 
   public String getAlgorithm()
@@ -87,6 +91,11 @@ public class SaslChallenge
   public String getRealm()
   {
     return realm;
+  }
+
+  public String getRSPAuth()
+  {
+    return rspauth;
   }
 
   public static SaslChallenge parse(String encodedString)
